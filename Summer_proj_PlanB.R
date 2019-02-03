@@ -57,6 +57,7 @@
       # search using the handle variable. Only need to remove the @ char in handle
       as.character(usernames) -> usernames
       gsub("@", "", usernames) -> usernames
+      unique(usernames) -> usernames
       
       
     # Creating structure of data frame for storing user metadata
@@ -65,17 +66,17 @@
       
       for (j in 1:length(usernames)) {
         user <- usernames[j]
-        print(user)
-        # print(paste0("Processing ",j, " out of ", length(usernames), " : ", user))
-
+        
+        print(paste0("Processing ", j, " of ", length(usernames), ":", user))
+        # Get data for each user and store in a temp data frame
         twListToDF(lookupUsers(user)) -> new_df
-        print(new_df)
+        # Append the new data to the user_metadata data frame
         rbind(user_metadata, new_df) -> user_metadata
 
-        return(user_metadata)
-        
-      
       }
+      print("Done extracting all user data...")
+    
+      return(user_metadata)
     }
     
     # function for finding top words associated with the highest sentiment
