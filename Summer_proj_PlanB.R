@@ -104,6 +104,14 @@
     get_user_data(ds1) -> user_ds1
 
 # Cleaning of data before processing the content ----
+    
+    # Get database of all world cities
+    if (!requireNamespace("maps")) {
+      install.packages("maps")
+    }
+    library("maps")
+        # use the dataset world.cities for cleaning location variable of user_ds
+    
         ds1$handle <- gsub("@", "", ds1$handle)
         
         # counting hastags
@@ -185,43 +193,3 @@ inner_join(aus_tidy_dtm, lex_bing, by = c("term" = "word")) %>%
 
 library(qdap)
 polarity(ds1$content, ds1$city)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-get_user_data <- function(csv_ds) {
-
-  # Get more information about the users
-  usernames <- ds1$handle 
-  # search using the handle variable. Only need to remove the @ char in handle
-  as.character(usernames) -> usernames
-  gsub("@", "", usernames) -> usernames
-  unique(usernames) -> usernames
-  
-  
-  # Creating structure of data frame for storing user metadata
-  twListToDF(lookupUsers("vinitp1402")) -> user_metadata
-  user_metadata[-1,] -> user_metadata
-  
-  for (j in 1:length(usernames)) {
-    user <- usernames[j]
-
-    print(paste0("Processing ",j, " out of ", length(usernames), " : ", user))
-    
-     twListToDF(lookupUsers(user)) -> new_df
-     rbind(user_metadata, new_df) -> user_metadata
-}
-}
