@@ -1,4 +1,5 @@
 #### Install and Load Libs necessary to access twitter ----
+# Thhis is comment for LOgic B
     if(!requireNamespace("twitteR")){
       install.packages("twitteR")
       library(twitteR)
