@@ -95,7 +95,140 @@
         paste(collapse = " ")
       
     }
+    
+    # function to scrape tweets and related metadata
+    twitter_scraper <- function(hashtag, since, until){
+      require(RSelenium)
+      require(rvest)
+      
+      # Start RSelenium server
+      
+      remoteDriver() -> remDr
+      rD <- rsDriver(port=4444L, browser="chrome")
+      remDr =rD[["client"]]
+      
+      #### Code to log into twitter
+      # # Log into twitter. However, not necessary to login to scrape data as on 2019-02-07
+      # 
+      # mailid<-remDr$findElement(using = 'css',  "[class = 'text-input email-input js-signin-email']")
+      # mailid$sendKeysToElement(list("myemail@gmail.com"))
+      # 
+      # # Enter password
+      # 
+      # password<-remDr$findElement(using = 'css', ".LoginForm-password .text-input")
+      # password$sendKeysToElement(list("password"))
+      # 
+      # # Click Enter
+      # 
+      # login <- remDr$findElement(using = 'css',".js-submit")
+      # login$clickElement()
 
+      # Initialze variables
+      # initialize the variables before getting in the loop
+      start_date <- as.Date(since)
+      end_date <- as.Date(until)
+      date <- as.Date()
+      i <- 1
+      end_date_str <- format(end_date, format = "%d %b %Y")
+      data.frame(handle=character(), username=character(), content=character(), tweet_date=character(), tweet_replies=integer(),
+                 tweet_retweets=integer(), tweet_favourites=integer()) -> scraped_df
+      since_str <- format(start_date, format = "%d %b %Y")
+      until_str <- format(start_date + months(1), format = "%d %b %Y")
+      
+        while (date != end_date_str) {
+        
+        # Search for one month of tweets  
+        # Prepare the dates that can be used in the search url
+        # Prepare search string
+        search_url <- paste0("https://twitter.com/search?l=en&q=%23", hashtag, "%20since%3A", 
+                             since, "%20until%3A", until, "&src=typd")
+        remDr$open
+        remDr$navigate(search_url)
+        
+        # Scroll to end of page and wait
+        remDr$executeScript(paste("scroll(0,",i*10000,");"))
+        Sys.sleep(3)    
+        page_source <- remDr$getPageSource()
+        
+        # Check if the page is loaded until the date put in search query
+        read_html(page_source[[1]]) %>%
+          html_nodes(".js-short-timestamp") %>%
+          html_text() %>%
+          # Convert to character
+          as.character() -> dates
+        dates[length(dates)] -> date
+        i <- i + 1
+        
+        print(paste0(date, "\n"))
+      }
+      
+      page_source <- remDr$getPageSource()
+      
+      # Scrape the content
+      read_html(page_source[[1]]) %>%
+        html_nodes(".tweet-text") %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> content
+      
+      # Scrape date of tweet
+      read_html(page_source[[1]]) %>%
+        html_nodes(".js-short-timestamp") %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> tweet_date
+      
+      # Scrape handle
+      read_html(page_source[[1]]) %>%
+        html_nodes(".show-popup-with-id") %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> handle
+      
+      # Scrape username
+      read_html(page_source[[1]]) %>%
+        html_nodes(".show-popup-with-id") %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> user_name
+      
+      # Scrape number of replies
+      read_html(page_source[[1]]) %>%
+        html_nodes(xpath='//*[@class="ProfileTweet-actionButton js-actionButton js-actionReply"]/span/span') %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> tweet_replies
+      
+      # Scrape number of retweets
+      read_html(page_source[[1]]) %>%
+        html_nodes(xpath='//*[@class="ProfileTweet-actionButton  js-actionButton js-actionRetweet"]/span/span') %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> tweet_retweets
+      
+      # Scrape number of favourites
+      read_html(page_source[[1]]) %>%
+        html_nodes(xpath='//*[@class="ProfileTweet-actionButton js-actionButton js-actionFavorite"]/span/span') %>%
+        html_text() %>%
+        # Convert to character
+        as.character() -> tweet_favourites
+      
+      # Close the server
+      remDr$close()
+      rD$server$stop()
+      # Combine the columns to form a data frame
+      cbind(handle, content, tweet_date, tweet_replies, tweet_retweets, tweet_favourites) -> scraped_df
+      
+      return(scraped_df)
+    }
+
+    
+# Prepare the search url strings
+    
+    search_tweets_all <- "https://twitter.com/search?l=en&q=%23vegan%20since%3A2011-01-01%20until%3A2018-12-31&src=typd"
+    
+    twitter_scraper(search_tweets_all) -> tweets_all
+    
 #### Execution
 
 # Read source files ----
