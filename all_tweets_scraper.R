@@ -1,3 +1,9 @@
+# This file is to collect tweets from twitter
+# The technique used is web scraping using the libarary RSelenium and rvest
+
+
+# The scroll function shall keep scrolling until no further content is loaded
+# This shall work for any website that has no pagination and infinte scrolling
 scroll <- function(start_date_url, end_date_url) {
   # Keep scrolling down page, loading new content each time.
   last_height = 0 #
@@ -26,6 +32,9 @@ scroll <- function(start_date_url, end_date_url) {
   
 }
 
+# The scraper function does the task of scraping the elements from the web page
+# This function needs to be redefined for every web site as the html contents would be different for each website
+# This one is designed for twitter
 scraper <- function(page_source) {
   # call scraper function to scrape tweets and return temp_df
   
@@ -48,14 +57,16 @@ scraper <- function(page_source) {
   # Scrape handle
   read_html(page_source[[1]]) %>%
     # html_nodes("username u-dir u-textTruncate") %>%
-    html_nodes(xpath = '//*[@class="username u-dir u-textTruncate"]/b') %>%
+    # html_nodes(xpath = '//*[@class="username u-dir u-textTruncate"]/b') %>%
+    html_nodes(xpath = '//*[@class="FullNameGroup"]//following-sibling::span/b') %>%
     html_text() %>%
     # Convert to character
     as.character() -> handle
   
   # Scrape username
   read_html(page_source[[1]]) %>%
-    html_nodes(".show-popup-with-id") %>%
+    # html_nodes(".show-popup-with-id") %>%
+    html_nodes(xpath = '//*[@class="FullNameGroup"]/strong') %>%
     html_text() %>%
     # Convert to character
     as.character() -> user_name
@@ -106,11 +117,14 @@ rD = rsDriver(browser = "chrome")
 remDr = rD[["client"]]
 remDr$close()
 
+# Change values for different type of search
+# Date format needs to be yyyy-mm-dd
 hashtag = "vegan"
 since = "2011-01-01"
 until = "2018-12-31"
 
 start_date_url <- as.Date(since)
+# Calculating last day of the month
 end_date_url <- as.Date(since) + months(1) - 1
 continue_flag <- TRUE
 
@@ -147,13 +161,30 @@ while (continue_flag) {
   
   print(paste0("main:: search url: ", search_url))
   
+  # Open the browser
   remDr$open()
+  
+  #  This line is equivalent to the action of entering the url and hitting enter
   remDr$navigate(search_url)
+  
+  # Scroll to the end of the page using the scroll function defined above
   scroll(start_date_url, end_date_url)
+  
+  # Once reached the end, capture the web page
   page_source <- remDr$getPageSource()
+  
+  # Scrape the required html elements using the scraper function defined above
   scraper(page_source) -> temp_df
+  
+  # Append the scraped tweets to previously scraped tweets
   rbind(scraped_df, temp_df) -> scraped_df
+  
+  # Close the browser
   remDr$close()
+  
+  # Write the output file
+  # Incase loop brekas, you always have the data scraped till this step
+  write.csv(scraped_df, file = "sracped_df.csv", row.names = FALSE)
   
   if (end_date_url == until) {
     continue_flag <- FALSE
@@ -176,5 +207,3 @@ while (continue_flag) {
   
   
 }
-
-

@@ -1,3 +1,5 @@
+# Once the tweets are collected using the web scraper, this function shall do the basic data cleaning
+
 #### Install and Load Libs necessary to access twitter ----
     # This is comment for Logic B
     if (!requireNamespace("twitteR")) {
@@ -96,217 +98,71 @@
       
     }
     
-    # function to scrape tweets and related metadata
-    twitter_scraper <- function(hashtag, since, until){
-      require(RSelenium)
-      require(rvest)
-      
-      # Start RSelenium server
-      
-      remoteDriver() -> remDr
-      rD <- rsDriver(port=4444L, browser="chrome")
-      remDr =rD[["client"]]
-      
-      #### Code to log into twitter
-      # # Log into twitter. However, not necessary to login to scrape data as on 2019-02-07
-      # 
-      # mailid<-remDr$findElement(using = 'css',  "[class = 'text-input email-input js-signin-email']")
-      # mailid$sendKeysToElement(list("myemail@gmail.com"))
-      # 
-      # # Enter password
-      # 
-      # password<-remDr$findElement(using = 'css', ".LoginForm-password .text-input")
-      # password$sendKeysToElement(list("password"))
-      # 
-      # # Click Enter
-      # 
-      # login <- remDr$findElement(using = 'css',".js-submit")
-      # login$clickElement()
-
-      # Initialze variables
-      # initialize the variables before getting in the loop
-      start_date <- as.Date(since)
-      end_date <- as.Date(until)
-      date <- as.Date()
-      i <- 1
-      end_date_str <- format(end_date, format = "%d %b %Y")
-      data.frame(handle=character(), username=character(), content=character(), tweet_date=character(), tweet_replies=integer(),
-                 tweet_retweets=integer(), tweet_favourites=integer()) -> scraped_df
-      since_str <- format(start_date, format = "%d %b %Y")
-      until_str <- format(start_date + months(1), format = "%d %b %Y")
-      
-        while (date != end_date_str) {
-        
-        # Search for one month of tweets  
-        # Prepare the dates that can be used in the search url
-        # Prepare search string
-        search_url <- paste0("https://twitter.com/search?l=en&q=%23", hashtag, "%20since%3A", 
-                             since, "%20until%3A", until, "&src=typd")
-        remDr$open
-        remDr$navigate(search_url)
-        
-        # Scroll to end of page and wait
-        remDr$executeScript(paste("scroll(0,",i*10000,");"))
-        Sys.sleep(3)    
-        page_source <- remDr$getPageSource()
-        
-        # Check if the page is loaded until the date put in search query
-        read_html(page_source[[1]]) %>%
-          html_nodes(".js-short-timestamp") %>%
-          html_text() %>%
-          # Convert to character
-          as.character() -> dates
-        dates[length(dates)] -> date
-        i <- i + 1
-        
-        print(paste0(date, "\n"))
-      }
-      
-      page_source <- remDr$getPageSource()
-      
-      # Scrape the content
-      read_html(page_source[[1]]) %>%
-        html_nodes(".tweet-text") %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> content
-      
-      # Scrape date of tweet
-      read_html(page_source[[1]]) %>%
-        html_nodes(".js-short-timestamp") %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> tweet_date
-      
-      # Scrape handle
-      read_html(page_source[[1]]) %>%
-        html_nodes(".show-popup-with-id") %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> handle
-      
-      # Scrape username
-      read_html(page_source[[1]]) %>%
-        html_nodes(".show-popup-with-id") %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> user_name
-      
-      # Scrape number of replies
-      read_html(page_source[[1]]) %>%
-        html_nodes(xpath='//*[@class="ProfileTweet-actionButton js-actionButton js-actionReply"]/span/span') %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> tweet_replies
-      
-      # Scrape number of retweets
-      read_html(page_source[[1]]) %>%
-        html_nodes(xpath='//*[@class="ProfileTweet-actionButton  js-actionButton js-actionRetweet"]/span/span') %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> tweet_retweets
-      
-      # Scrape number of favourites
-      read_html(page_source[[1]]) %>%
-        html_nodes(xpath='//*[@class="ProfileTweet-actionButton js-actionButton js-actionFavorite"]/span/span') %>%
-        html_text() %>%
-        # Convert to character
-        as.character() -> tweet_favourites
-      
-      # Close the server
-      remDr$close()
-      rD$server$stop()
-      # Combine the columns to form a data frame
-      cbind(handle, content, tweet_date, tweet_replies, tweet_retweets, tweet_favourites) -> scraped_df
-      
-      return(scraped_df)
-    }
-
-    
-# Prepare the search url strings
-    
-    search_tweets_all <- "https://twitter.com/search?l=en&q=%23vegan%20since%3A2011-01-01%20until%3A2018-12-31&src=typd"
-    
-    twitter_scraper(search_tweets_all) -> tweets_all
     
 #### Execution
 
 # Read source files ----
     setwd("C:/Users/vinit/Summer Project (Vegan)/src_files_proj")
-    read.csv("csv_files/2011.csv") -> "tweets_2011" #processed
-    read.csv("csv_files/2012.csv") -> "tweets_2012"
-    read.csv("csv_files/2013.csv") -> "tweets_2013" #processed
-    read.csv("csv_files/2013.csv") -> "tweets_2014"
-    read.csv("csv_files/2013.csv") -> "tweets_2015"
-    read.csv("csv_files/2013.csv") -> "tweets_2016"
-    read.csv("csv_files/2013.csv") -> "tweets_2017"
-    read.csv("csv_files/2013.csv") -> "tweets_2018"
-
-# Combine all the source files using the rbind function
-    rbind(
-      tweets_2011,
-      tweets_2012,
-      tweets_2013,
-      tweets_2014,
-      tweets_2015,
-      tweets_2016,
-      tweets_2017,
-      tweets_2018
-    ) -> tweets_master_df
-
-# Collect user's data
-    get_user_data(tweets_2011) -> user_2011_df
-    get_user_data(tweets_2013) -> user_2013_df
-
-# Merge user data with tweets data ----
+    read.csv("csv_files/all_tweets_3.csv", stringsAsFactors = FALSE) -> tweets_ds
+    read.csv("csv_files/user_ds_cleaned.v.3.0.csv", stringsAsFactors = FALSE) -> user_ds
+    
+# library required to perform join operation to join user data with tweets data
     if (!requireNamespace('sqldf')) {
       install.packages('sqldf')
     }
     library('sqldf')
   
     # Remove the '@' in handle variable to perform a join with user data df
-    tweets_2011$handle <- gsub("@", "", tweets_2011$handle)
-    user_2011_df$handle <- rownames(user_2011_df)
-    merge(tweets_2011, user_2011_df, by = "handle") -> tweets_2011
+    # tweets_ds$handle <- gsub("@", "", tweets_ds$handle) # no need as I removed the '@' symbol during the scraping process
+   
+    # Remove useless columns
+    user_ds$url <- NULL
+    user_ds$name <- NULL
+    user_ds$protected <- NULL
+    user_ds$country_main_filter <- NULL
+    user_ds$id <- NULL
+    user_ds$listedCount <- NULL
+    user_ds$followRequestSent <- NULL
+    user_ds$profileImageUrl <- NULL
+    
+    # Rename columns to more meaningful names
+    names(user_ds)[names(user_ds)=="Description"] <- "user_description"
+    names(user_ds)[names(user_ds)=="created"] <- "account_created"
+    names(user_ds)[names(user_ds)=="screenName"] <- "handle"
+    names(user_ds)[names(user_ds)=="statusesCount"] <- "total_status_counts"
+    names(user_ds)[names(user_ds)=="followersCount"] <- "total_followers"
+    names(user_ds)[names(user_ds)=="favoritesCount"] <- "total_favorites"
+    names(user_ds)[names(user_ds)=="friendsCount"] <- "total_friends"
     
     # Export this to csv (for client presentation)
-    write.csv(tweets_2011, file = "tweets_2011_master_table.csv", row.names = FALSE)
+    write.csv(user_ds, file = "user_ds_cleaned.v.3.0.csv", row.names = FALSE)
 
 # Cleaning of data before processing the content ----
-
-# Get database of all world cities
-if (!requireNamespace("maps")) {
-  install.packages("maps")
-}
-library("maps")
-# use the dataset world.cities for cleaning location variable of user_ds
-
-    tweets_2011$handle <- gsub("@", "", tweets_2011$handle)
+    tweets_ds$handle <- gsub("@", "", tweets_ds$handle)
     
-    # counting hastags
-    # first add a new column
-    tweets_2011$no_of_hashtags <- 0
-    
-    for (i in 1:length(tweets_2011$content)) {
-      tweets_2011$no_of_hashtags[i] <- countHashtag(tweets_2011$content[i])
+    # for counting hastags, add a new column
+    tweets_ds$no_of_hashtags <- 0
+        for (i in 1:length(tweets_ds$content)) {
+      tweets_ds$no_of_hashtags[i] <- countHashtag(tweets_ds$content[i])
     }
     
-    # counting urls
-    # first add a new column
-    tweets_2011$no_of_urls <- 0
-    
-    for (i in 1:length(tweets_2011$content)) {
-      tweets_2011$no_of_urls[i] <- countUrl(tweets_2011$content[i])
+    # for counting urls, add a new column
+    tweets_ds$no_of_urls <- 0
+        for (i in 1:length(tweets_ds$content)) {
+      tweets_ds$no_of_urls[i] <- countUrl(tweets_ds$content[i])
     }
     
-    # remove urls
-    tweets_2011$content <- sapply(tweets_2011$content, removeUrl)
+    # remove urls from tweets
+    tweets_ds$content <- sapply(tweets_ds$content, removeUrl)
     
     # remove special characters
-    tweets_2011$content <- sapply(tweets_2011$content, removeSpecialChars)
+    tweets_ds$content <- sapply(tweets_ds$content, removeSpecialChars)
     
     # convert all tweets to lower case
-    tweets_2011$content <- sapply(tweets_2011$content, tolower)
+    tweets_ds$content <- sapply(tweets_ds$content, tolower)
+
+    # joining the  two data frames    
+    merge(tweets_ds, user_ds, by = "handle") -> tweets_ds
 
 #### Sentiment Analysis ----
 
@@ -317,13 +173,14 @@ library("maps")
     library('tm')
     
     # Make a corpus
-    aus_corpus <- Corpus(VectorSource(tweets_2011$content))
+    tweets_ds_au <- subset(tweets_ds, country_final == "Australia")
+    aus_corpus <- Corpus(VectorSource(tweets_ds_au$content))
     
     # Convert to DTM
     aus_dtm <- DocumentTermMatrix(aus_corpus)
     
     # prepare a tidy data frame
-    # tidy data frame lists eveyr word with their frequency of occurence for every line
+    # tidy data frame lists every word with their frequency of occurence for every line
     library(tidytext)
     tidy(aus_dtm) -> aus_tidy_dtm
     
@@ -332,7 +189,7 @@ library("maps")
     # get_sentiments("bing") -> lex_bing
     # get_sentiments("afinn") -> lex_afinn
 
-library(dplyr)
+    library(dplyr)
 
 # arranging the sentiments
 inner_join(aus_tidy_dtm, lex_nrc, by = c("term" = "word")) %>%
@@ -346,29 +203,9 @@ inner_join(aus_tidy_dtm, lex_nrc, by = c("term" = "word")) %>%
       find_freq_words(aus_tidy_dtm, nrc_sentiments_aus$sentiment[i]) -> nrc_sentiments_aus$top_words[i]
     }
 
-
 # Export files necessary to explain client (only for 2019-02-05) ----
         write.csv(nrc_sentiments_aus, file = "sentiments_australia.csv", row.names = FALSE)
-        
-        # Remove the unwanted columns before exporting to csv
-        tweets_2011$web.scraper.order <- NULL
-        tweets_2011$web.scraper.start.url <- NULL
-        tweets_2011$name.x <- NULL
-        tweets_2011$unix_timestamp <- NULL
-        tweets_2011$url.x <- NULL
-        tweets_2011$url.y <- NULL
-        tweets_2011$name.y <- NULL
-        tweets_2011$profileImageUrl <- NULL
-        
-        # Rename columns to more meaningful names
-        names(tweets_2011)[names(tweets_2011)=="description"] <- "user_description"
-        names(tweets_2011)[names(tweets_2011)=="created"] <- "account_created"
-        names(tweets_2011)[names(tweets_2011)=="replies"] <- "tweet_replies"
-        names(tweets_2011)[names(tweets_2011)=="retweets"] <- "tweet_retweets"
-        names(tweets_2011)[names(tweets_2011)=="favorites"] <- "tweets_favorites"
-        names(tweets_2011)[names(tweets_2011)=="statusesCount"] <- "total_status_counts"
-        names(tweets_2011)[names(tweets_2011)=="followersCount"] <- "total_followers"
-        names(tweets_2011)[names(tweets_2011)=="favoritesCount"] <- "total_favorites"
-        names(tweets_2011)[names(tweets_2011)=="friendsCount"] <- "total_friends"
-        
-        write.csv(tweets_2011, file = "tweets_2011_master_table.csv", row.names = FALSE) 
+    
+    
+     
+       

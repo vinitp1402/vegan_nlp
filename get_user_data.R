@@ -1,7 +1,9 @@
-# Program to get user data
+# This file is to get user data
+# It reads the handles from the twitter file and requests twitter for all the user information
+# The resultant data frane is staored and exported as a csv file
 
 #### Install and Load Libs necessary to access twitter ----
-# This is comment for Logic B
+
 if (!requireNamespace("twitteR")) {
   install.packages("twitteR")
 }
@@ -29,8 +31,6 @@ auth_tw <- function() {
 }
 auth_tw()
 
-
-
 #### Execution ----
 
 read.csv("csv_files/tweets_2011-18.csv") -> csv_ds
@@ -44,5 +44,4 @@ unique(usernames) -> usernames
 
 # Creating structure of data frame for storing user metadata
 twListToDF(lookupUsers(usernames)) -> user_metadata
-user_metadata[-1, ] -> user_metadata
 
