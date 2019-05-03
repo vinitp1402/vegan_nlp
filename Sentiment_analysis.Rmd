@@ -1,0 +1,113 @@
+---
+title: "R Notebook"
+---
+
+install the required packages for sentiment analysis
+
+```{r}
+# for Corpus() function
+if (!requireNamespace('tm')) {
+  install.packages('tm')
+}
+library('tm')
+
+# for tidy data frame
+if (!requireNamespace("tidytext")) {
+install.packages("tidytext")
+}
+library("tidytext"
+)
+get_sentiments("nrc") -> lex_nrc
+
+# for using the inner_join function
+if (!requireNamespace("dplyr")) {
+install.packages("dplyr")
+}
+library("dplyr")
+
+# for using the %>% operator
+if (!requireNamespace("magrittr")) {
+install.packages("magrittr")
+}
+library("magrittr")
+
+```
+
+Define a function that does the sentiment analysis
+Idea is to pass the country as a parameter and get the top keywrods for that country for every sentiment
+
+```{r}
+find_sentiments <- function(country_ag) {
+  # Make a corpus
+  tweets_subset <- subset(tweets_ds, country_final == country_ag)
+  corpus_subset <- Corpus(VectorSource(tweets_subset$content))
+  
+  # Convert to DTM
+  dtm_subset <- DocumentTermMatrix(corpus_subset)
+  
+  # prepare a tidy data frame
+  # tidy data frame lists every word with their frequency of occurence for every line
+  tidy(dtm_subset) -> tidy_dtm_sb
+  
+  # Get the three lexicons
+  get_sentiments("nrc") -> lex_nrc
+  # get_sentiments("bing") -> lex_bing
+  # get_sentiments("afinn") -> lex_afinn
+  
+  
+  # arranging the sentiments
+  inner_join(tidy_dtm_sb, lex_nrc, by = c("term" = "word")) %>%
+    # group_by(document) %>%
+    count(sentiment, sort = TRUE) -> nrc_sentiments
+  
+  #### Find top keywords associated with each sentiment and store in dataframe
+  # Add a new column top words
+  nrc_sentiments$top_words <- c("")
+  for (i in 1:length(nrc_sentiments$sentiment)) {
+    find_freq_words(tidy_dtm_sb, nrc_sentiments$sentiment[i]) -> nrc_sentiments$top_words[i]
+    country_ag -> nrc_sentiments$country
+  }
+  return(nrc_sentiments)
+}
+
+find_freq_words <- function(x, y) {
+      # x = tidy data frame
+      # y = sentiment
+      inner_join(x, lex_nrc, by = c("term" = "word")) %>%
+        filter(sentiment == y) %>%
+        count(term, sort = TRUE) %>%
+        top_n(n = 5) %>%
+        arrange(desc(n)) -> tempp_tibble
+      
+      unlist(tempp_tibble$term) %>%
+        paste(collapse = " ")
+      
+    }
+
+
+```
+
+Now that the function is defined that finds sentiments (using the nrc lexicons at the moment), import the necessary file to start with
+
+```{r}
+tweets_ds <- read_csv("csv_files/combined_tweets_users.csv",  na = "NA")
+```
+Call the function find_sentiments for Australia, US and UK and store the returned result in a data frame
+
+```{r}
+sentiments_aus <- find_sentiments("Australia")
+sentiments_us <- find_sentiments("USA")
+sentiments_uk <- find_sentiments("UK")
+```
+
+Combine the three data frames
+
+```{r}
+sentiments_df <- bind_rows(sentiments_aus, sentiments_uk, sentiments_us)
+```
+
+Export the result to a csv file
+```{r}
+write.csv(sentiments_df, file = "sentiments_US_UK_AU.csv", row.names = FALSE)
+```
+

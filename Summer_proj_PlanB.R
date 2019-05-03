@@ -82,23 +82,6 @@
       return(user_metadata)
     }
     
-    # function for finding top words associated with the highest sentiment
-    
-    find_freq_words <- function(x, y) {
-      # x = tidy data frame
-      # y = sentiment
-      inner_join(x, lex_nrc, by = c("term" = "word")) %>%
-        filter(sentiment == y) %>%
-        count(term, sort = TRUE) %>%
-        top_n(n = 5) %>%
-        arrange(desc(n)) -> tempp_tibble
-      
-      unlist(tempp_tibble$term) %>%
-        paste(collapse = " ")
-      
-    }
-    
-    
 #### Execution
 
 # Read source files ----
@@ -164,47 +147,6 @@
     # joining the  two data frames    
     merge(tweets_ds, user_ds, by = "handle") -> tweets_ds
 
-#### Sentiment Analysis ----
-
-    if (!requireNamespace('tm')) {
-      # for Corpus() function
-      install.packages('tm')
-    }
-    library('tm')
-    
-    # Make a corpus
-    tweets_ds_au <- subset(tweets_ds, country_final == "Australia")
-    aus_corpus <- Corpus(VectorSource(tweets_ds_au$content))
-    
-    # Convert to DTM
-    aus_dtm <- DocumentTermMatrix(aus_corpus)
-    
-    # prepare a tidy data frame
-    # tidy data frame lists every word with their frequency of occurence for every line
-    library(tidytext)
-    tidy(aus_dtm) -> aus_tidy_dtm
-    
-    # Get the three lexicons
-    get_sentiments("nrc") -> lex_nrc
-    # get_sentiments("bing") -> lex_bing
-    # get_sentiments("afinn") -> lex_afinn
-
-    library(dplyr)
-
-# arranging the sentiments
-inner_join(aus_tidy_dtm, lex_nrc, by = c("term" = "word")) %>%
-  # group_by(document) %>%
-  count(sentiment, sort = TRUE) -> nrc_sentiments_aus
-
-#### Find top keywords associated with each sentiment and store in dataframe
-    # Add a new column top words
-    nrc_sentiments_aus$top_words <- c("")
-    for (i in 1:length(nrc_sentiments_aus$sentiment)) {
-      find_freq_words(aus_tidy_dtm, nrc_sentiments_aus$sentiment[i]) -> nrc_sentiments_aus$top_words[i]
-    }
-
-# Export files necessary to explain client (only for 2019-02-05) ----
-        write.csv(nrc_sentiments_aus, file = "sentiments_australia.csv", row.names = FALSE)
     
     
      
