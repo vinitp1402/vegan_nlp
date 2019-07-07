@@ -8,3 +8,5 @@
 **3. data_cleaning.R** *(clean the user data file)*
 
 **4. Summer_proj_PlanB.R** *(clean the tweets file, merge tweets and user data file and perform sentiment analysis)*
+
+**5. Sentiment_analysis.Rmd** *(extract sentiments)*
